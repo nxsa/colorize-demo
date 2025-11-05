@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme {
+    --font-sans: 'Instrument Sans', sans-serif;
+}
+
+
+@layer utilities {
+    button {
+        cursor: pointer !important;
+    }
+}
