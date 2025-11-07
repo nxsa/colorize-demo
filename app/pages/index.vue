@@ -15,6 +15,8 @@
 
             <input ref="fileInputRef" type="file" accept="image/*" @change="handleImageUpload" class="hidden" />
 
+            <UAlert v-if="errorMessage" color="error" variant="subtle" class="mb-4" :title="errorMessage" />
+
             <div class="overflow-hidden rounded-lg border border-border shadow-lg">
                 <canvas ref="canvasRef" class="block w-full" style="max-width: 100%; height: auto;"></canvas>
             </div>
@@ -29,6 +31,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { fabric } from 'fabric';
+import { json } from 'stream/consumers';
+import { error } from 'console';
 
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -36,6 +40,7 @@ const fabricCanvasRef = ref<fabric.Canvas | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isLoading = ref(false);
 const gotColors = ref<string[]>([]);
+const errorMessage = ref<string | null>(null);
 // Store all images and their palettes, use id for matching
 const imagesWithPalettes = ref<{ id: string, img: fabric.Image, palette: string[] }[]>([]);
 
@@ -59,60 +64,72 @@ onBeforeUnmount(() => {
     fabricCanvasRef.value?.dispose();
 });
 
-const handleImageUpload = (event: Event) => {
+const handleImageUpload = async (event: Event) => {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
     if (!file) return;
 
     isLoading.value = true;
+    errorMessage.value = null;
     const reader = new FileReader();
 
     reader.onload = async (e) => {
         const arrayBuffer = e.target?.result as ArrayBuffer;
         const bufferArray = Array.from(new Uint8Array(arrayBuffer));
-        const uint8 = new Uint8Array(arrayBuffer);
         const mimetype = file.type;
 
-        // Send buffer and mimetype as JSON
-        const response = await fetch('/api/process', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ data: bufferArray, mimetype }),
-        });
-        if (!response.ok) {
-            isLoading.value = false;
-            throw new Error('Failed to process image');
-        }
-
-        const { data, mimetype: returnedType, imageType, colorPalette } = await response.json();
-        const blob = new Blob([new Uint8Array(data)], { type: returnedType });
-        const url = URL.createObjectURL(blob);
-
-        fabric.Image.fromURL(url, (img) => {
-            const maxWidth = 400;
-            const maxHeight = 250;
-            const scale = Math.min(maxWidth / (img.width ?? 1), maxHeight / (img.height ?? 1), 1);
-
-            img.scale(scale);
-            img.set({
-                left: ((fabricCanvasRef.value?.width ?? 0) - img.getScaledWidth()) / 2,
-                top: ((fabricCanvasRef.value?.height ?? 0) - img.getScaledHeight()) / 2,
+        try {
+            errorMessage.value = null;
+            const response = await fetch('/api/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ data: bufferArray, mimetype }),
             });
+            if (!response.ok) {
 
-            // Assign a unique id to each image
-            (img as any).myId = `${Date.now()}-${Math.random()}`;
-            // Store image and its palette
-            imagesWithPalettes.value.push({ id: (img as any).myId, img, palette: colorPalette });
-            fabricCanvasRef.value?.add(img);
-            fabricCanvasRef.value?.setActiveObject(img);
-            fabricCanvasRef.value?.renderAll();
+                isLoading.value = false;
+                let msg = 'Failed to process image';
+                const err = await response.json();
+                msg = err.message || err.statusMessage || msg;
+                throw new Error(msg);
+                /* errorMessage.value = msg;
+                console.log('Error response from server:', errorMessage.value);
+                return; */
+            }
+
+            const { data, mimetype: returnedType, imageType, colorPalette } = await response.json();
+            const blob = new Blob([new Uint8Array(data)], { type: returnedType });
+            const url = URL.createObjectURL(blob);
+
+            fabric.Image.fromURL(url, (img) => {
+                const maxWidth = 400;
+                const maxHeight = 250;
+                const scale = Math.min(maxWidth / (img.width ?? 1), maxHeight / (img.height ?? 1), 1);
+
+                img.scale(scale);
+                img.set({
+                    left: ((fabricCanvasRef.value?.width ?? 0) - img.getScaledWidth()) / 2,
+                    top: ((fabricCanvasRef.value?.height ?? 0) - img.getScaledHeight()) / 2,
+                });
+
+                // Assign a unique id to each image
+                (img as any).myId = `${Date.now()}-${Math.random()}`;
+                // Store image and its palette
+                imagesWithPalettes.value.push({ id: (img as any).myId, img, palette: colorPalette });
+                fabricCanvasRef.value?.add(img);
+                fabricCanvasRef.value?.setActiveObject(img);
+                fabricCanvasRef.value?.renderAll();
+                isLoading.value = false;
+                // Show palette for newly added image
+                gotColors.value = colorPalette;
+                console.log('Added image id:', (img as any).myId, 'Palette:', colorPalette);
+            });
+        } catch (err: any) {
             isLoading.value = false;
-            // Show palette for newly added image
-            gotColors.value = colorPalette;
-            console.log('Added image id:', (img as any).myId, 'Palette:', colorPalette);
-        });
+            errorMessage.value = err?.message || 'Failed to process image';
+        }
     };
 
     reader.readAsArrayBuffer(file);

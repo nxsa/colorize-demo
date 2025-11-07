@@ -40,6 +40,15 @@ export default defineEventHandler(async (event) => {
           ? "SpotColor"
           : "FullColor";
     }
+
+    if (imageType === "FullColor") {
+      throw createError({
+        statusCode: 400,
+        statusMessage:
+          "Full color images are not supported. Please upload a simple/illustration image.",
+      });
+    }
+
     const colorPalette = await getColorPalette({
       data: buffer,
       mimetype,
@@ -54,10 +63,6 @@ export default defineEventHandler(async (event) => {
       colorPalette,
     };
   } catch (error) {
-    console.error("Error processing image with sharp:", error);
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Error processing image.",
-    });
+    throw error;
   }
 });
