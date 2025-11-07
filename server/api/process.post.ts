@@ -3,7 +3,7 @@ import {
   analyzeImageEntropy,
   analyzeImageHistogram,
   getColorPalette,
-} from "../utils/imageprocess3";
+} from "../utils/imghsl";
 
 export default defineEventHandler(async (event) => {
   // Expecting JSON payload: { data: number[], mimetype: string }
