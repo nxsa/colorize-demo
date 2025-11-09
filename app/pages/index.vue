@@ -31,9 +31,13 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { fabric } from 'fabric';
-import { json } from 'stream/consumers';
-import { error } from 'console';
 
+interface ApiResponse {
+    data: number[];
+    mimetype: string;
+    imageType: string;
+    colorPalette: string[];
+}
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const fabricCanvasRef = ref<fabric.Canvas | null>(null);
@@ -91,7 +95,7 @@ const handleImageUpload = async (event: Event) => {
 
                 isLoading.value = false;
                 let msg = 'Failed to process image';
-                const err = await response.json();
+                const err: any = await response.json();
                 msg = err.message || err.statusMessage || msg;
                 throw new Error(msg);
                 /* errorMessage.value = msg;
@@ -99,7 +103,7 @@ const handleImageUpload = async (event: Event) => {
                 return; */
             }
 
-            const { data, mimetype: returnedType, imageType, colorPalette } = await response.json();
+            const { data, mimetype: returnedType, imageType, colorPalette } = await response.json() as ApiResponse;
             const blob = new Blob([new Uint8Array(data)], { type: returnedType });
             const url = URL.createObjectURL(blob);
 

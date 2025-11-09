@@ -6,8 +6,10 @@
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "preview": "npm run build && wrangler dev",
+    "postinstall": "nuxt prepare",
+    "deploy": "npm run build && wrangler deploy",
+    "rc-typegen": "wrangler types"
   },
   "dependencies": {
     "@nuxt/ui": "^4.1.0",
@@ -33,6 +35,7 @@
     "@types/fabric": "^4.5.15",
     "@types/get-pixels": "^3.3.4",
     "@types/node": "^24.9.2",
-    "@types/quantize": "^1.0.2"
+    "@types/quantize": "^1.0.2",
+    "wrangler": "^4.46.0"
   }
 }

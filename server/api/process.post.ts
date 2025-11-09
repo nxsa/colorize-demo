@@ -1,8 +1,8 @@
 import sharp from "sharp";
 import {
-  analyzeImageEntropy,
-  analyzeImageHistogram,
-  getColorPalette,
+  analyzeImageEntropyHSL,
+  analyzeImageHistogramHSL,
+  getColorPaletteHSL,
 } from "../utils/imghsl";
 
 export default defineEventHandler(async (event) => {
@@ -26,8 +26,8 @@ export default defineEventHandler(async (event) => {
       .resize({ width: 800, withoutEnlargement: true })
       .toBuffer();
     const [isIllustration, isIllustration2] = await Promise.allSettled([
-      analyzeImageEntropy(buffer, mimetype),
-      analyzeImageHistogram(buffer, mimetype),
+      analyzeImageEntropyHSL(buffer, mimetype),
+      analyzeImageHistogramHSL(buffer, mimetype),
     ]);
     let imageType = "FullColor";
 
@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const colorPalette = await getColorPalette({
+    const colorPalette = await getColorPaletteHSL({
       data: buffer,
       mimetype,
       numColors: 12,

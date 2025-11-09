@@ -9,7 +9,7 @@ interface GetColorPalettePayload {
   imageType?: string;
 }
 
-export const analyzeImageHistogram = (buffer: Buffer, mimetype: string) => {
+export const analyzeImageHistogramHSL = (buffer: Buffer, mimetype: string) => {
   return new Promise((resolve, reject) => {
     getPixels(buffer, mimetype, (err: any, pixels: any) => {
       if (err) {
@@ -44,7 +44,7 @@ export const analyzeImageHistogram = (buffer: Buffer, mimetype: string) => {
   });
 };
 
-export const analyzeImageEntropy = (buffer: Buffer, mimetype: string) => {
+export const analyzeImageEntropyHSL = (buffer: Buffer, mimetype: string) => {
   return new Promise((resolve, reject) => {
     getPixels(buffer, mimetype, (err, pixels) => {
       if (err) {
@@ -85,7 +85,7 @@ export const analyzeImageEntropy = (buffer: Buffer, mimetype: string) => {
 };
 
 // This function is now used in the new SpotColor logic
-const getNearestColor = (pallete: number[][], color: number[]) => {
+const getNearestColorHSL = (pallete: number[][], color: number[]) => {
   const Kl = 1.5;
   const Kc = 1.5;
   const Kh = 1.8;
@@ -103,7 +103,7 @@ const getNearestColor = (pallete: number[][], color: number[]) => {
   return pallete[index];
 };
 
-export const getColorPalette = async ({
+export const getColorPaletteHSL = async ({
   data,
   mimetype,
   numColors = 12,
