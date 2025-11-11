@@ -2,8 +2,9 @@ import sharp from "sharp";
 import {
   analyzeImageEntropyHSL,
   analyzeImageHistogramHSL,
-  getColorPaletteHSL,
 } from "../utils/imghsl";
+import { getColorPaletteHSL } from "../utils/extractPalette";
+import { detectSpotColors } from "../utils/palette2";
 
 export default defineEventHandler(async (event) => {
   // Expecting JSON payload: { data: number[], mimetype: string }
@@ -49,7 +50,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const colorPalette = await getColorPaletteHSL({
+    const colorPalette = await detectSpotColors({
       data: buffer,
       mimetype,
       numColors: 12,
