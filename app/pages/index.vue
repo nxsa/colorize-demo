@@ -3,7 +3,10 @@
         <div class="mx-auto max-w-2xl">
             <h1 class="mb-2 text-3xl font-bold text-foreground">Canvas Editor</h1>
             <p class="mb-6 text-muted-foreground">Upload an image to render it onto the canvas</p>
-
+            <div class="color-block flex flex-wrap gap-1.5 mb-6 cursor-pointer">
+                <div class="color-item size-7 rounded-[6px]" v-for="color in designColors" :key="color.id"
+                    :style="{ backgroundColor: color.hex_code }"></div>
+            </div>
             <div class="mb-6 flex gap-3">
                 <UButton @click="handleUploadClick" :loading="isLoading" icon="i-heroicons-arrow-up-tray">
                     {{ isLoading ? "Loading..." : "Upload Image" }}
@@ -23,14 +26,57 @@
         </div>
         <div class="test-block mt-[50px] grid grid-cols-5 gap-3.5 max-w-[600px] mx-auto">
             <div v-for="(color, index) in gotColors" :key="index" class="w-[100px] h-[100px] border"
-                :style="{ backgroundColor: color }"></div>
+                :style="{ backgroundColor: color.hex_code }"></div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { fabric } from 'fabric';
+import { designcolors } from '~~/shared/designcolors';
+import chroma from 'chroma-js';
+
+
+
+function sortColorsByHue(colors: any[]) {
+    // Helper functions
+    function isWhite(hex: string) {
+        const [h, s, l] = chroma(hex).hsl();
+        return (l > 0.95 && s < 0.1) || hex.toLowerCase() === '#fff' || hex.toLowerCase() === '#ffffff';
+    }
+    function isBlack(hex: string) {
+        const [h, s, l] = chroma(hex).hsl();
+        return (l < 0.08 && s < 0.1) || hex.toLowerCase() === '#000' || hex.toLowerCase() === '#000000';
+    }
+    function isGrey(hex: string) {
+        const [h, s, l] = chroma(hex).hsl();
+        return s < 0.15 && l > 0.08 && l < 0.95 && !isWhite(hex) && !isBlack(hex);
+    }
+
+    return [...colors].sort((a, b) => {
+        // White first
+        if (isWhite(a.hex_code) && !isWhite(b.hex_code)) return -1;
+        if (!isWhite(a.hex_code) && isWhite(b.hex_code)) return 1;
+        // Black second
+        if (isBlack(a.hex_code) && !isBlack(b.hex_code)) return -1;
+        if (!isBlack(a.hex_code) && isBlack(b.hex_code)) return 1;
+        // Greys next
+        if (isGrey(a.hex_code) && !isGrey(b.hex_code)) return -1;
+        if (!isGrey(a.hex_code) && isGrey(b.hex_code)) return 1;
+        // The rest: sort by hue, then saturation, then lightness (all descending)
+        const [hA, sA, lA] = chroma(a.hex_code).hsl();
+        const [hB, sB, lB] = chroma(b.hex_code).hsl();
+        const hueA = isNaN(hA) ? 0 : hA;
+        const hueB = isNaN(hB) ? 0 : hB;
+        const satA = isNaN(sA) ? 0 : sA;
+        const satB = isNaN(sB) ? 0 : sB;
+        const lightA = isNaN(lA) ? 0 : lA;
+        const lightB = isNaN(lB) ? 0 : lB;
+        if (hueA !== hueB) return hueB - hueA;
+        if (satA !== satB) return satB - satA;
+        return lightB - lightA;
+    });
+}
 
 interface ApiResponse {
     data: number[];
@@ -43,10 +89,11 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const fabricCanvasRef = ref<fabric.Canvas | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isLoading = ref(false);
-const gotColors = ref<string[]>([]);
+const gotColors = ref<any[]>([]);
 const errorMessage = ref<string | null>(null);
 // Store all images and their palettes, use id for matching
 const imagesWithPalettes = ref<{ id: string, img: fabric.Image, palette: string[] }[]>([]);
+const designColors = sortColorsByHue(designcolors as any[]);
 
 onMounted(() => {
     if (canvasRef.value) {
@@ -128,7 +175,6 @@ const handleImageUpload = async (event: Event) => {
                 isLoading.value = false;
                 // Show palette for newly added image
                 gotColors.value = colorPalette;
-                console.log('Added image id:', (img as any).myId, 'Palette:', colorPalette);
             });
         } catch (err: any) {
             isLoading.value = false;
@@ -150,7 +196,6 @@ function updateSelectedPalette(e: any) {
     // Use id for matching
     const found = imagesWithPalettes.value.find(entry => (entry.img as any).myId === (selectedObj as any).myId);
     gotColors.value = found?.palette || [];
-    console.log('Selected image id:', selectedObj.id, 'Palette:', gotColors.value);
 }
 const handleUploadClick = () => {
     fileInputRef.value?.click();
